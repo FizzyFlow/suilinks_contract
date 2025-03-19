@@ -1,7 +1,7 @@
 module linktreeclone_contract::linktreeclone_contract;
 
 use std::string::String;
-use sui::table::{Self, Table};
+use sui::object_table::{Self, ObjectTable as Table};
 
 public struct UserTable has key, store {
   id: UID,
@@ -57,14 +57,14 @@ const E_INVALID_LINK: u64 = 4;
 
 // Core functions for user management
 public fun create_user(
-    table: &mut UserTable,
+    object_table: &mut UserTable,
     display_name: String,
     bio: String,
     avatar_url: String,
     ctx: &mut TxContext,
 ) {
     let sender = tx_context::sender(ctx);
-    assert!(!table::contains(&table.users, sender), E_USER_ALREADY_EXISTS);
+    assert!(!object_table::contains(&object_table.users, sender), E_USER_ALREADY_EXISTS);
 
     let user = User {
         id: object::new(ctx),
@@ -74,18 +74,18 @@ public fun create_user(
         links: vector::empty(),
     };
     
-    table::add(&mut table.users, sender, user);
+    object_table::add(&mut object_table.users, sender, user);
 }
 
 public fun update_user_profile(
-    table: &mut UserTable,
+    object_table: &mut UserTable,
     display_name: String,
     bio: String,
     avatar_url: String,
     ctx: &mut TxContext,
 ) {
     let sender = tx_context::sender(ctx);
-    let user = table::borrow_mut(&mut table.users, sender);
+    let user = object_table::borrow_mut(&mut object_table.users, sender);
     
     user.display_name = display_name;
     user.bio = bio;
@@ -93,7 +93,7 @@ public fun update_user_profile(
 }
 
 public fun add_link(
-    table: &mut UserTable,
+    object_table: &mut UserTable,
     url: String,
     title: String,
     description: String,
@@ -104,7 +104,7 @@ public fun add_link(
     ctx: &mut TxContext,
 ) {
     let sender = tx_context::sender(ctx);
-    let user = table::borrow_mut(&mut table.users, sender);
+    let user = object_table::borrow_mut(&mut object_table.users, sender);
     
     let link = Link {
         url,
@@ -120,25 +120,25 @@ public fun add_link(
 }
 
 public fun remove_link(
-    table: &mut UserTable,
+    object_table: &mut UserTable,
     index: u64,
     ctx: &mut TxContext,
 ) {
     let sender = tx_context::sender(ctx);
-    let user = table::borrow_mut(&mut table.users, sender);
+    let user = object_table::borrow_mut(&mut object_table.users, sender);
     
     assert!(index < vector::length(&user.links), E_INVALID_LINK);
     vector::remove(&mut user.links, index);
 }
 
 // View functions
-public fun get_user_profile(table: &UserTable, user_addr: address): &User {
-    assert!(table::contains(&table.users, user_addr), E_USER_NOT_FOUND);
-    table::borrow(&table.users, user_addr)
+public fun get_user_profile(object_table: &UserTable, user_addr: address): &User {
+    assert!(object_table::contains(&object_table.users, user_addr), E_USER_NOT_FOUND);
+    object_table::borrow(&object_table.users, user_addr)
 }
 
-public fun get_user_links(table: &UserTable, user_addr: address): &vector<Link> {
-    let user = get_user_profile(table, user_addr);
+public fun get_user_links(object_table: &UserTable, user_addr: address): &vector<Link> {
+    let user = get_user_profile(object_table, user_addr);
     &user.links
 }
 
@@ -197,7 +197,7 @@ public fun get_link_platform(link: &Link): &String {
 fun init(ctx: &mut TxContext) {
     let user_table = UserTable {
         id: object::new(ctx),
-        users: table::new(ctx),
+        users: object_table::new(ctx),
     };
     transfer::share_object(user_table);
 }
