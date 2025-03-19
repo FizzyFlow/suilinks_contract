@@ -184,4 +184,88 @@ module linktreeclone_contract::linktreeclone_contract_tests {
         
         test_scenario::end(scenario_val);
     }
+
+    #[test]
+    fun test_delete_user() {
+        let owner = @0xA;
+        let admin = @0xB;
+        let mut scenario_val = test_scenario::begin(admin);
+        let scenario = &mut scenario_val;
+        
+        // Initialize the contract
+        test_scenario::next_tx(scenario, owner);
+        {
+            linktreeclone_contract::init_for_testing(test_scenario::ctx(scenario));
+        };
+
+        // Create user
+        test_scenario::next_tx(scenario, owner);
+        {
+            let mut table = test_scenario::take_shared<UserTable>(scenario);
+            let table_mut = &mut table;
+            
+            linktreeclone_contract::create_user(
+                table_mut,
+                string::utf8(b"Test User"),
+                string::utf8(b"Bio"),
+                string::utf8(b"avatar.jpg"),
+                test_scenario::ctx(scenario),
+            );
+
+            // Verify user exists
+            assert!(linktreeclone_contract::contains_user(table_mut, owner), 1);
+
+            test_scenario::return_shared(table);
+        };
+
+        // Delete user
+        test_scenario::next_tx(scenario, owner);
+        {
+            let mut table = test_scenario::take_shared<UserTable>(scenario);
+            let table_mut = &mut table;
+            
+            linktreeclone_contract::delete_user(
+                table_mut,
+                test_scenario::ctx(scenario),
+            );
+
+            // Verify user is deleted
+            assert!(!linktreeclone_contract::contains_user(table_mut, owner), 2);
+
+            test_scenario::return_shared(table);
+        };
+        
+        test_scenario::end(scenario_val);
+    }
+
+    #[test]
+    #[expected_failure(abort_code = 1)]
+    fun test_delete_nonexistent_user() {
+        let owner = @0xA;
+        let admin = @0xB;
+        let mut scenario_val = test_scenario::begin(admin);
+        let scenario = &mut scenario_val;
+        
+        // Initialize the contract
+        test_scenario::next_tx(scenario, owner);
+        {
+            linktreeclone_contract::init_for_testing(test_scenario::ctx(scenario));
+        };
+
+        // Try to delete non-existent user
+        test_scenario::next_tx(scenario, owner);
+        {
+            let mut table = test_scenario::take_shared<UserTable>(scenario);
+            let table_mut = &mut table;
+            
+            linktreeclone_contract::delete_user(
+                table_mut,
+                test_scenario::ctx(scenario),
+            );
+
+            test_scenario::return_shared(table);
+        };
+        
+        test_scenario::end(scenario_val);
+    }
 } 

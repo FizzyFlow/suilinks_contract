@@ -207,4 +207,21 @@ public fun init_for_testing(ctx: &mut TxContext) {
     init(ctx);
 }
 
+// Add after other functions
+public fun delete_user(
+    object_table: &mut UserTable,
+    ctx: &mut TxContext,
+) {
+    let sender = tx_context::sender(ctx);
+    assert!(object_table::contains(&object_table.users, sender), E_USER_NOT_FOUND);
+    
+    let User { id, display_name: _, bio: _, avatar_url: _, links: _ } = 
+        object_table::remove(&mut object_table.users, sender);
+    object::delete(id);
+}
+
+// Add getter function for checking user existence
+public fun contains_user(object_table: &UserTable, user_addr: address): bool {
+    object_table::contains(&object_table.users, user_addr)
+}
 
