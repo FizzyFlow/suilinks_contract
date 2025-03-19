@@ -159,11 +159,6 @@ public fun get_links_count(user: &User): u64 {
     vector::length(&user.links)
 }
 
-public fun get_link_at(user: &User, index: u64): &Link {
-    assert!(index < vector::length(&user.links), E_INVALID_LINK);
-    vector::borrow(&user.links, index)
-}
-
 // View functions for Link
 public fun get_link_url(link: &Link): &String {
     &link.url
@@ -223,5 +218,39 @@ public fun delete_user(
 // Add getter function for checking user existence
 public fun contains_user(object_table: &UserTable, user_addr: address): bool {
     object_table::contains(&object_table.users, user_addr)
+}
+
+// Add update link function
+public fun update_link(
+    object_table: &mut UserTable,
+    index: u64,
+    url: String,
+    title: String,
+    description: String,
+    image_url: String,
+    tags: vector<String>,
+    is_public: bool,
+    platform: String,
+    ctx: &mut TxContext,
+) {
+    let sender = tx_context::sender(ctx);
+    let user = object_table::borrow_mut(&mut object_table.users, sender);
+    assert!(index < vector::length(&user.links), E_INVALID_LINK);
+    
+    let link = vector::borrow_mut(&mut user.links, index);
+    link.url = url;
+    link.title = title;
+    link.description = description;
+    link.image_url = image_url;
+    link.tags = tags;
+    link.isPublic = is_public;
+    link.platform = platform;
+}
+
+// Add new getter function for links
+public fun get_link(object_table: &UserTable, user_addr: address, index: u64): &Link {
+    let user = get_user_profile(object_table, user_addr);
+    assert!(index < vector::length(&user.links), E_INVALID_LINK);
+    vector::borrow(&user.links, index)
 }
 
