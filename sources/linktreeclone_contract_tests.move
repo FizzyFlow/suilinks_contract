@@ -25,10 +25,10 @@ module linktreeclone_contract::linktreeclone_contract_tests {
             
             linktreeclone_contract::create_user(
                 table_mut,
-                test_scenario::ctx(scenario),
                 string::utf8(b"Test User"),
                 string::utf8(b"Bio"),
                 string::utf8(b"avatar.jpg"),
+                test_scenario::ctx(scenario),
             );
             
             let user = linktreeclone_contract::get_user_profile(table_mut, owner);
@@ -63,15 +63,14 @@ module linktreeclone_contract::linktreeclone_contract_tests {
             
             linktreeclone_contract::create_user(
                 table_mut,
-                test_scenario::ctx(scenario),
                 string::utf8(b"Test User"),
                 string::utf8(b"Bio"),
                 string::utf8(b"avatar.jpg"),
+                test_scenario::ctx(scenario),
             );
             
             linktreeclone_contract::add_link(
                 table_mut,
-                test_scenario::ctx(scenario),
                 string::utf8(b"https://example.com"),
                 string::utf8(b"Example"),
                 string::utf8(b"Description"),
@@ -79,6 +78,7 @@ module linktreeclone_contract::linktreeclone_contract_tests {
                 vector[string::utf8(b"tag1")],
                 true,
                 string::utf8(b"website"),
+                test_scenario::ctx(scenario),
             );
             
             let links = linktreeclone_contract::get_user_links(table_mut, owner);
@@ -110,10 +110,10 @@ module linktreeclone_contract::linktreeclone_contract_tests {
             
             linktreeclone_contract::create_user(
                 table_mut,
-                test_scenario::ctx(scenario),
                 string::utf8(b"Test User"),
                 string::utf8(b"Bio"),
                 string::utf8(b"avatar.jpg"),
+                test_scenario::ctx(scenario),
             );
             
             let user = linktreeclone_contract::get_user_profile(table_mut, owner);
@@ -150,15 +150,14 @@ module linktreeclone_contract::linktreeclone_contract_tests {
             
             linktreeclone_contract::create_user(
                 table_mut,
-                test_scenario::ctx(scenario),
                 string::utf8(b"Test User"),
                 string::utf8(b"Bio"),
                 string::utf8(b"avatar.jpg"),
+                test_scenario::ctx(scenario),
             );
             
             linktreeclone_contract::add_link(
                 table_mut,
-                test_scenario::ctx(scenario),
                 string::utf8(b"https://example.com"),
                 string::utf8(b"Example"),
                 string::utf8(b"Description"),
@@ -166,6 +165,7 @@ module linktreeclone_contract::linktreeclone_contract_tests {
                 vector[string::utf8(b"tag1")],
                 true,
                 string::utf8(b"website"),
+                test_scenario::ctx(scenario),
             );
             
             let user = linktreeclone_contract::get_user_profile(table_mut, owner);

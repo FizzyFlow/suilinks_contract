@@ -58,10 +58,10 @@ const E_INVALID_LINK: u64 = 4;
 // Core functions for user management
 public fun create_user(
     table: &mut UserTable,
-    ctx: &mut TxContext,
     display_name: String,
     bio: String,
     avatar_url: String,
+    ctx: &mut TxContext,
 ) {
     let sender = tx_context::sender(ctx);
     assert!(!table::contains(&table.users, sender), E_USER_ALREADY_EXISTS);
@@ -79,10 +79,10 @@ public fun create_user(
 
 public fun update_user_profile(
     table: &mut UserTable,
-    ctx: &mut TxContext,
     display_name: String,
     bio: String,
     avatar_url: String,
+    ctx: &mut TxContext,
 ) {
     let sender = tx_context::sender(ctx);
     let user = table::borrow_mut(&mut table.users, sender);
@@ -94,7 +94,6 @@ public fun update_user_profile(
 
 public fun add_link(
     table: &mut UserTable,
-    ctx: &mut TxContext,
     url: String,
     title: String,
     description: String,
@@ -102,6 +101,7 @@ public fun add_link(
     tags: vector<String>,
     is_public: bool,
     platform: String,
+    ctx: &mut TxContext,
 ) {
     let sender = tx_context::sender(ctx);
     let user = table::borrow_mut(&mut table.users, sender);
@@ -121,8 +121,8 @@ public fun add_link(
 
 public fun remove_link(
     table: &mut UserTable,
-    ctx: &mut TxContext,
     index: u64,
+    ctx: &mut TxContext,
 ) {
     let sender = tx_context::sender(ctx);
     let user = table::borrow_mut(&mut table.users, sender);
