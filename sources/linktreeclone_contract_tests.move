@@ -81,8 +81,13 @@ module linktreeclone_contract::linktreeclone_contract_tests {
                 test_scenario::ctx(scenario),
             );
             
-            let links = linktreeclone_contract::get_user_links(table_mut, owner);
-            assert!(vector::length(links) == 1, 1);
+            let user = linktreeclone_contract::get_user_profile(table_mut, owner);
+            assert!(linktreeclone_contract::get_links_count(user) == 1, 1);
+            
+            // Verify link data
+            let link = linktreeclone_contract::get_link(table_mut, owner, 0);
+            assert!(linktreeclone_contract::get_link_url(link) == &string::utf8(b"https://example.com"), 2);
+            assert!(linktreeclone_contract::get_link_owner(link) == owner, 3);
 
             test_scenario::return_shared(table);
         };
@@ -178,6 +183,7 @@ module linktreeclone_contract::linktreeclone_contract_tests {
             assert!(linktreeclone_contract::get_link_image_url(link) == &string::utf8(b"image.jpg"), 5);
             assert!(linktreeclone_contract::is_link_public(link) == true, 6);
             assert!(linktreeclone_contract::get_link_platform(link) == &string::utf8(b"website"), 7);
+            assert!(linktreeclone_contract::get_link_owner(link) == owner, 8);
 
             test_scenario::return_shared(table);
         };
@@ -389,6 +395,84 @@ module linktreeclone_contract::linktreeclone_contract_tests {
             test_scenario::return_shared(table);
         };
         
+        test_scenario::end(scenario_val);
+    }
+
+    #[test]
+    fun test_link_visibility() {
+        let owner = @0xA;
+        let viewer = @0xB;
+        let admin = @0xC;
+        let mut scenario_val = test_scenario::begin(admin);
+        let scenario = &mut scenario_val;
+        
+        // Initialize and create user
+        test_scenario::next_tx(scenario, owner);
+        {
+            linktreeclone_contract::init_for_testing(test_scenario::ctx(scenario));
+        };
+
+        // Create user and add links
+        test_scenario::next_tx(scenario, owner);
+        {
+            let mut table = test_scenario::take_shared<UserTable>(scenario);
+            let table_mut = &mut table;
+            
+            // Create user
+            linktreeclone_contract::create_user(
+                table_mut,
+                string::utf8(b"Test User"),
+                string::utf8(b"Bio"),
+                string::utf8(b"avatar.jpg"),
+                test_scenario::ctx(scenario),
+            );
+            
+            // Add public link
+            linktreeclone_contract::add_link(
+                table_mut,
+                string::utf8(b"https://public.com"),
+                string::utf8(b"Public Link"),
+                string::utf8(b"Public Description"),
+                string::utf8(b"public.jpg"),
+                vector[string::utf8(b"public")],
+                true,
+                string::utf8(b"website"),
+                test_scenario::ctx(scenario),
+            );
+
+            // Add private link
+            linktreeclone_contract::add_link(
+                table_mut,
+                string::utf8(b"https://private.com"),
+                string::utf8(b"Private Link"),
+                string::utf8(b"Private Description"),
+                string::utf8(b"private.jpg"),
+                vector[string::utf8(b"private")],
+                false,
+                string::utf8(b"website"),
+                test_scenario::ctx(scenario),
+            );
+
+            test_scenario::return_shared(table);
+        };
+
+        // Test visibility as owner
+        test_scenario::next_tx(scenario, owner);
+        {
+            let mut table = test_scenario::take_shared<UserTable>(scenario);
+            let table_mut = &mut table;
+
+            // Verify owner can see both links
+            assert!(linktreeclone_contract::is_link_visible(table_mut, owner, 0, owner), 1);
+            assert!(linktreeclone_contract::is_link_visible(table_mut, owner, 1, owner), 2);
+
+            // Verify other user can only see public link
+            assert!(linktreeclone_contract::is_link_visible(table_mut, owner, 0, viewer), 3);
+            assert!(!linktreeclone_contract::is_link_visible(table_mut, owner, 1, viewer), 4);
+
+            test_scenario::return_shared(table);
+        };
+
         test_scenario::end(scenario_val);
     }
 } 
