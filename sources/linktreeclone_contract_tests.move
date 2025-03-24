@@ -475,4 +475,95 @@ module linktreeclone_contract::linktreeclone_contract_tests {
 
         test_scenario::end(scenario_val);
     }
+
+    #[test]
+    fun test_user_id() {
+        let owner = @0xA;
+        let admin = @0xB;
+        let mut scenario_val = test_scenario::begin(admin);
+        let scenario = &mut scenario_val;
+        
+        // Initialize and create user
+        test_scenario::next_tx(scenario, owner);
+        {
+            linktreeclone_contract::init_for_testing(test_scenario::ctx(scenario));
+        };
+
+        test_scenario::next_tx(scenario, owner);
+        {
+            let mut table = test_scenario::take_shared<UserTable>(scenario);
+            let table_mut = &mut table;
+            
+            linktreeclone_contract::create_user(
+                table_mut,
+                string::utf8(b"Test User"),
+                string::utf8(b"Bio"),
+                string::utf8(b"avatar.jpg"),
+                test_scenario::ctx(scenario),
+            );
+            
+            let user = linktreeclone_contract::get_user_profile(table_mut, owner);
+            let user_id = linktreeclone_contract::get_user_id(user);
+            
+            // 验证用户 ID 可以被获取
+            assert!(linktreeclone_contract::get_user_id_by_address(table_mut, owner) == user_id, 1);
+            
+            test_scenario::return_shared(table);
+        };
+        
+        test_scenario::end(scenario_val);
+    }
+
+    #[test]
+    fun test_link_with_user_id() {
+        let owner = @0xA;
+        let admin = @0xB;
+        let mut scenario_val = test_scenario::begin(admin);
+        let scenario = &mut scenario_val;
+        
+        // Initialize and create user with link
+        test_scenario::next_tx(scenario, owner);
+        {
+            linktreeclone_contract::init_for_testing(test_scenario::ctx(scenario));
+        };
+
+        test_scenario::next_tx(scenario, owner);
+        {
+            let mut table = test_scenario::take_shared<UserTable>(scenario);
+            let table_mut = &mut table;
+            
+            linktreeclone_contract::create_user(
+                table_mut,
+                string::utf8(b"Test User"),
+                string::utf8(b"Bio"),
+                string::utf8(b"avatar.jpg"),
+                test_scenario::ctx(scenario),
+            );
+            
+            let user_id = linktreeclone_contract::get_user_id_by_address(table_mut, owner);
+            
+            linktreeclone_contract::add_link(
+                table_mut,
+                string::utf8(b"https://example.com"),
+                string::utf8(b"Example"),
+                string::utf8(b"Description"),
+                string::utf8(b"image.jpg"),
+                vector[string::utf8(b"tag1")],
+                true,
+                string::utf8(b"website"),
+                test_scenario::ctx(scenario),
+            );
+            
+            // 确保用户 ID 可以用于获取链接
+            let user = linktreeclone_contract::get_user_profile(table_mut, owner);
+            assert!(linktreeclone_contract::get_links_count(user) == 1, 1);
+            
+            let link = linktreeclone_contract::get_link(table_mut, owner, 0);
+            assert!(linktreeclone_contract::get_link_url(link) == &string::utf8(b"https://example.com"), 2);
+            
+            test_scenario::return_shared(table);
+        };
+        
+        test_scenario::end(scenario_val);
+    }
 } 

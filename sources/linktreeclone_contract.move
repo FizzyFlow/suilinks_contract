@@ -327,3 +327,14 @@ public fun update_link(
     link.platform = platform;
 }
 
+// 修改 View functions 部分
+public fun get_user_id(user: &User): ID {
+    object::uid_to_inner(&user.id)
+}
+
+// 增加辅助函数来获取用户的完整 ID
+public fun get_user_id_by_address(object_table: &UserTable, user_addr: address): ID {
+    let user = get_user_profile(object_table, user_addr);
+    get_user_id(user)
+}
+
