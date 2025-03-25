@@ -1,12 +1,11 @@
 module linktreeclone_contract::linktreeclone_contract;
 
 use std::string::String;
-use sui::object_table::{Self, ObjectTable as Table};
+use sui::table::{Self, Table};
 
 public struct UserTable has key, store {
   id: UID,
   users: Table<address, User>,
-  links: Table<ID, Link>,
 }
 
 #[allow(unused_field)]
@@ -38,12 +37,10 @@ public struct User has key, store {
   display_name: String,
   bio: String,
   avatar_url: String,
-  links: vector<ID>,
+  links: vector<Link>,
 }
 
-public struct Link has key, store {
-  id: UID,
-  owner: address,
+public struct Link has store, drop {
   url: String,
   title: String,
   description: String,
@@ -56,10 +53,7 @@ public struct Link has key, store {
 // Error codes
 const E_USER_NOT_FOUND: u64 = 1;
 const E_USER_ALREADY_EXISTS: u64 = 2;
-const E_UNAUTHORIZED: u64 = 3;
 const E_INVALID_LINK: u64 = 4;
-const E_LINK_NOT_PUBLIC: u64 = 5;
-const E_LINK_NOT_FOUND: u64 = 6;
 
 // Core functions for user management
 public fun create_user(
@@ -70,7 +64,7 @@ public fun create_user(
     ctx: &mut TxContext,
 ) {
     let sender = tx_context::sender(ctx);
-    assert!(!object_table::contains(&object_table.users, sender), E_USER_ALREADY_EXISTS);
+    assert!(!table::contains(&object_table.users, sender), E_USER_ALREADY_EXISTS);
 
     let user = User {
         id: object::new(ctx),
@@ -80,7 +74,7 @@ public fun create_user(
         links: vector::empty(),
     };
     
-    object_table::add(&mut object_table.users, sender, user);
+    table::add(&mut object_table.users, sender, user);
 }
 
 public fun update_user_profile(
@@ -91,7 +85,7 @@ public fun update_user_profile(
     ctx: &mut TxContext,
 ) {
     let sender = tx_context::sender(ctx);
-    let user = object_table::borrow_mut(&mut object_table.users, sender);
+    let user = table::borrow_mut(&mut object_table.users, sender);
     
     user.display_name = display_name;
     user.bio = bio;
@@ -110,14 +104,9 @@ public fun add_link(
     ctx: &mut TxContext,
 ) {
     let sender = tx_context::sender(ctx);
-    let user = object_table::borrow_mut(&mut object_table.users, sender);
-    
-    let link_id = object::new(ctx);
-    let id_copy = object::uid_to_inner(&link_id);
+    let user = table::borrow_mut(&mut object_table.users, sender);
     
     let link = Link {
-        id: link_id,
-        owner: sender,
         url,
         title,
         description,
@@ -127,8 +116,7 @@ public fun add_link(
         platform,
     };
     
-    object_table::add(&mut object_table.links, id_copy, link);
-    vector::push_back(&mut user.links, id_copy);
+    vector::push_back(&mut user.links, link);
 }
 
 public fun remove_link(
@@ -137,23 +125,19 @@ public fun remove_link(
     ctx: &mut TxContext,
 ) {
     let sender = tx_context::sender(ctx);
-    let user = object_table::borrow_mut(&mut object_table.users, sender);
+    let user = table::borrow_mut(&mut object_table.users, sender);
     
     assert!(index < vector::length(&user.links), E_INVALID_LINK);
-    let link_id = vector::swap_remove(&mut user.links, index);
-    
-    let Link { id, owner: _, url: _, title: _, description: _, image_url: _, tags: _, isPublic: _, platform: _ } = 
-        object_table::remove(&mut object_table.links, link_id);
-    object::delete(id);
+    vector::remove(&mut user.links, index);
 }
 
 // View functions
 public fun get_user_profile(object_table: &UserTable, user_addr: address): &User {
-    assert!(object_table::contains(&object_table.users, user_addr), E_USER_NOT_FOUND);
-    object_table::borrow(&object_table.users, user_addr)
+    assert!(table::contains(&object_table.users, user_addr), E_USER_NOT_FOUND);
+    table::borrow(&object_table.users, user_addr)
 }
 
-public fun get_user_links_ids(object_table: &UserTable, user_addr: address): &vector<ID> {
+public fun get_user_links(object_table: &UserTable, user_addr: address): &vector<Link> {
     let user = get_user_profile(object_table, user_addr);
     &user.links
 }
@@ -176,16 +160,10 @@ public fun get_links_count(user: &User): u64 {
 }
 
 // View functions for Link
-public fun get_link_by_id(object_table: &UserTable, link_id: ID): &Link {
-    assert!(object_table::contains(&object_table.links, link_id), E_LINK_NOT_FOUND);
-    object_table::borrow(&object_table.links, link_id)
-}
-
 public fun get_link(object_table: &UserTable, user_addr: address, index: u64): &Link {
     let user = get_user_profile(object_table, user_addr);
     assert!(index < vector::length(&user.links), E_INVALID_LINK);
-    let link_id = vector::borrow(&user.links, index);
-    get_link_by_id(object_table, *link_id)
+    vector::borrow(&user.links, index)
 }
 
 public fun is_link_visible(
@@ -196,8 +174,7 @@ public fun is_link_visible(
 ): bool {
     let user = get_user_profile(object_table, user_addr);
     assert!(index < vector::length(&user.links), E_INVALID_LINK);
-    let link_id = vector::borrow(&user.links, index);
-    let link = get_link_by_id(object_table, *link_id);
+    let link = vector::borrow(&user.links, index);
     link.isPublic || user_addr == viewer
 }
 
@@ -207,8 +184,7 @@ public fun get_public_links(object_table: &UserTable, user_addr: address): vecto
     let mut public_indices = vector::empty<u64>();
     let mut i = 0;
     while (i < len) {
-        let link_id = vector::borrow(&user.links, i);
-        let link = get_link_by_id(object_table, *link_id);
+        let link = vector::borrow(&user.links, i);
         if (link.isPublic) {
             vector::push_back(&mut public_indices, i);
         };
@@ -217,6 +193,7 @@ public fun get_public_links(object_table: &UserTable, user_addr: address): vecto
     public_indices
 }
 
+// View functions for Link
 public fun get_link_url(link: &Link): &String {
     &link.url
 }
@@ -245,16 +222,11 @@ public fun get_link_platform(link: &Link): &String {
     &link.platform
 }
 
-public fun get_link_owner(link: &Link): address {
-    link.owner
-}
-
 // Add init function
 fun init(ctx: &mut TxContext) {
     let user_table = UserTable {
         id: object::new(ctx),
-        users: object_table::new(ctx),
-        links: object_table::new(ctx),
+        users: table::new(ctx),
     };
     transfer::share_object(user_table);
 }
@@ -270,31 +242,16 @@ public fun delete_user(
     ctx: &mut TxContext,
 ) {
     let sender = tx_context::sender(ctx);
-    assert!(object_table::contains(&object_table.users, sender), E_USER_NOT_FOUND);
+    assert!(table::contains(&object_table.users, sender), E_USER_NOT_FOUND);
     
-    let User { id, display_name: _, bio: _, avatar_url: _, mut links } = 
-        object_table::remove(&mut object_table.users, sender);
-        
-    // 删除所有链接
-    let len = vector::length(&links);
-    let mut i = 0;
-    while (i < len) {
-        let link_id = vector::pop_back(&mut links);
-        if (object_table::contains(&object_table.links, link_id)) {
-            let Link { id: link_uid, owner: _, url: _, title: _, description: _, image_url: _, tags: _, isPublic: _, platform: _ } = 
-                object_table::remove(&mut object_table.links, link_id);
-            object::delete(link_uid);
-        };
-        i = i + 1;
-    };
-    
-    vector::destroy_empty(links);
+    let User { id, display_name: _, bio: _, avatar_url: _, links: _ } = 
+        table::remove(&mut object_table.users, sender);
     object::delete(id);
 }
 
 // Add getter function for checking user existence
 public fun contains_user(object_table: &UserTable, user_addr: address): bool {
-    object_table::contains(&object_table.users, user_addr)
+    table::contains(&object_table.users, user_addr)
 }
 
 // Add update link function
@@ -311,13 +268,10 @@ public fun update_link(
     ctx: &mut TxContext,
 ) {
     let sender = tx_context::sender(ctx);
-    let user = object_table::borrow(&object_table.users, sender);
+    let user = table::borrow_mut(&mut object_table.users, sender);
     assert!(index < vector::length(&user.links), E_INVALID_LINK);
     
-    let link_id = vector::borrow(&user.links, index);
-    let link = object_table::borrow_mut(&mut object_table.links, *link_id);
-    assert!(link.owner == sender, E_UNAUTHORIZED);
-    
+    let link = vector::borrow_mut(&mut user.links, index);
     link.url = url;
     link.title = title;
     link.description = description;

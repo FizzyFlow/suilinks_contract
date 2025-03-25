@@ -87,7 +87,6 @@ module linktreeclone_contract::linktreeclone_contract_tests {
             // Verify link data
             let link = linktreeclone_contract::get_link(table_mut, owner, 0);
             assert!(linktreeclone_contract::get_link_url(link) == &string::utf8(b"https://example.com"), 2);
-            assert!(linktreeclone_contract::get_link_owner(link) == owner, 3);
 
             test_scenario::return_shared(table);
         };
@@ -183,7 +182,6 @@ module linktreeclone_contract::linktreeclone_contract_tests {
             assert!(linktreeclone_contract::get_link_image_url(link) == &string::utf8(b"image.jpg"), 5);
             assert!(linktreeclone_contract::is_link_public(link) == true, 6);
             assert!(linktreeclone_contract::get_link_platform(link) == &string::utf8(b"website"), 7);
-            assert!(linktreeclone_contract::get_link_owner(link) == owner, 8);
 
             test_scenario::return_shared(table);
         };
@@ -459,8 +457,8 @@ module linktreeclone_contract::linktreeclone_contract_tests {
         // Test visibility as owner
         test_scenario::next_tx(scenario, owner);
         {
-            let mut table = test_scenario::take_shared<UserTable>(scenario);
-            let table_mut = &mut table;
+            let table = test_scenario::take_shared<UserTable>(scenario);
+            let table_mut = &table;
 
             // Verify owner can see both links
             assert!(linktreeclone_contract::is_link_visible(table_mut, owner, 0, owner), 1);
@@ -539,9 +537,7 @@ module linktreeclone_contract::linktreeclone_contract_tests {
                 string::utf8(b"avatar.jpg"),
                 test_scenario::ctx(scenario),
             );
-            
-            let user_id = linktreeclone_contract::get_user_id_by_address(table_mut, owner);
-            
+                        
             linktreeclone_contract::add_link(
                 table_mut,
                 string::utf8(b"https://example.com"),
